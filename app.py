@@ -1,8 +1,42 @@
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
+You said:
+🏦 Loan Approval Prediction App
+Enter applicant details to check loan approval chances
 
+NameError: This app has encountered an error. The original error message is redacted to prevent data leaks. Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app).
+Traceback:
+File "/mount/src/lp_train.csv/app.py", line 35, in <module>
+    le = LabelEncoder()
+         ^^^^^ ^^^^^^^ error found 
+ChatGPT said:
+Got it 👍 This is a classic Streamlit + ML error, nothing scary.
+
+❌ Error meaning
+NameError: name 'LabelEncoder' is not defined
+Python is telling you:
+👉 “You are using LabelEncoder() but you never imported it.”
+
+✅ Fix (MOST IMPORTANT)
+Add this import at the top of your app.py file 👇
+
+from sklearn.preprocessing import LabelEncoder
+Your imports section should look something like this:
+
+import streamlit as st
+import pandas as pd
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
 st.set_page_config(page_title="Loan Approval Prediction", layout="centered")
 
 st.title("🏦 Loan Approval Prediction App")
