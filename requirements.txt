@@ -1,9 +1,8 @@
- streamlit 
- pandas 
- numpy 
-sklearn.model_selection 
-sklearn.preprocessing 
-sklearn.linear_model 
-
+streamlit
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
 
  
