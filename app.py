@@ -1,137 +1,128 @@
 
-
 import streamlit as st
 import pandas as pd
 import numpy as np
-
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import LabelEncoder
-You said:
-🏦 Loan Approval Prediction App
-Enter applicant details to check loan approval chances
 
-NameError: This app has encountered an error. The original error message is redacted to prevent data leaks. Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app).
-Traceback:
-File "/mount/src/lp_train.csv/app.py", line 35, in <module>
-    le = LabelEncoder()
-         ^^^^^ ^^^^^^^ error found 
-ChatGPT said:
-Got it 👍 This is a classic Streamlit + ML error, nothing scary.
-
-❌ Error meaning
-NameError: name 'LabelEncoder' is not defined
-Python is telling you:
-👉 “You are using LabelEncoder() but you never imported it.”
-
-✅ Fix (MOST IMPORTANT)
-Add this import at the top of your app.py file 👇
-
-from sklearn.preprocessing import LabelEncoder
-Your imports section should look something like this:
-
-import streamlit as st
-import pandas as pd
-import numpy as np
-
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import LabelEncoder
-st.set_page_config(page_title="Loan Approval Prediction", layout="centered")
+# ---------------------------
+# PAGE CONFIG
+# ---------------------------
+st.set_page_config(
+    page_title="Loan Approval Prediction",
+    page_icon="🏦",
+    layout="centered"
+)
 
 st.title("🏦 Loan Approval Prediction App")
-st.write("Enter applicant details to check loan approval chances")
+st.write("Enter applicant details to check loan approval status.")
 
-# =====================
-# Load Dataset
-# =====================
-df = pd.read_csv("LP_Train.csv")
+# ---------------------------
+# LOAD & PREPROCESS DATA
+# ---------------------------
+@st.cache_data
+def load_data():
+    df = pd.read_csv("../Datasets/LP_Train.csv")
 
-# =====================
-# Data Cleaning (YOUR LOGIC)
-# =====================
-df['Dependents'] = df['Dependents'].fillna(0)
-df['Dependents'] = df['Dependents'].replace('[+]','', regex=True).astype(int)
+    df['Dependents'] = df['Dependents'].fillna(0)
+    df['Dependents'] = df['Dependents'].replace('[+]','', regex=True).astype(int)
 
-df['Gender'] = df['Gender'].fillna('Male')
-df['Married'] = df['Married'].fillna('Yes')
-df['Self_Employed'] = df['Self_Employed'].fillna('Yes')
+    df['Gender'] = df['Gender'].fillna('Male')
+    df['Married'] = df['Married'].fillna('Yes')
+    df['Self_Employed'] = df['Self_Employed'].fillna('Yes')
 
-df['LoanAmount'] = df['LoanAmount'].fillna(df['LoanAmount'].mean())
-df['Loan_Amount_Term'] = df['Loan_Amount_Term'].fillna(df['Loan_Amount_Term'].mean())
-df['Credit_History'] = df['Credit_History'].fillna(0)
+    df['LoanAmount'] = df['LoanAmount'].fillna(df['LoanAmount'].mean()).astype(int)
+    df['Loan_Amount_Term'] = df['Loan_Amount_Term'].fillna(df['Loan_Amount_Term'].mean())
 
-df = df.rename(columns={'Loan_Status': 'Loan_approval'})
+    df['Credit_History'] = df['Credit_History'].fillna(0).astype(int)
 
-# =====================
-# Encoding
-# =====================
-le = LabelEncoder()
-cat_cols = ['Gender','Married','Education','Self_Employed','Property_Area','Loan_approval']
+    df = df.rename(columns={'Loan_Status': 'Loan_approval'})
+    df['Loan_approval'] = df['Loan_approval'].map({'Y': 1, 'N': 0})
 
-for col in cat_cols:
-    df[col] = le.fit_transform(df[col])
+    return df
 
-# =====================
-# Model Training
-# =====================
-X = df[['Gender','Married','Dependents','Education','Self_Employed',
-        'ApplicantIncome','CoapplicantIncome','LoanAmount',
-        'Loan_Amount_Term','Credit_History','Property_Area']]
+df = load_data()
 
+# ---------------------------
+# ENCODING
+# ---------------------------
+encoder = LabelEncoder()
+categorical_cols = ['Gender', 'Married', 'Education', 'Self_Employed', 'Property_Area']
+
+for col in categorical_cols:
+    df[col] = encoder.fit_transform(df[col])
+
+# ---------------------------
+# MODEL TRAINING
+# ---------------------------
+X = df.drop(['Loan_approval', 'Loan_ID'], axis=1)
 y = df['Loan_approval']
 
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
 model = LogisticRegression(max_iter=1000)
-model.fit(X, y)
+model.fit(X_train, y_train)
 
-# =====================
-# USER INPUT
-# =====================
-st.header("📋 Applicant Details")
+# ---------------------------
+# USER INPUT SECTION
+# ---------------------------
+st.sidebar.header("👤 Applicant Information")
 
-name = st.text_input("Applicant Name")
+name = st.sidebar.text_input("Applicant Name")
 
-gender = st.selectbox("Gender", ['Male','Female'])
-married = st.selectbox("Married", ['Yes','No'])
-education = st.selectbox("Education", ['Graduate','Not Graduate'])
-self_emp = st.selectbox("Self Employed", ['Yes','No'])
-property_area = st.selectbox("Property Area", ['Urban','Semiurban','Rural'])
+gender = st.sidebar.selectbox("Gender", ['Male', 'Female'])
+married = st.sidebar.selectbox("Married", ['Yes', 'No'])
+dependents = st.sidebar.selectbox("Dependents", [0, 1, 2, 3])
+education = st.sidebar.selectbox("Education", ['Graduate', 'Not Graduate'])
+self_employed = st.sidebar.selectbox("Self Employed", ['Yes', 'No'])
 
-dependents = st.number_input("Dependents", 0, 5, 0)
-app_income = st.number_input("Applicant Income", 0)
-co_income = st.number_input("Co-applicant Income", 0)
-loan_amt = st.number_input("Loan Amount", 0)
-loan_term = st.selectbox("Loan Term", [360, 240, 180, 120])
-credit_history = st.selectbox("Credit History", [1, 0])
+app_income = st.sidebar.number_input("Applicant Income", min_value=0)
+coapp_income = st.sidebar.number_input("Coapplicant Income", min_value=0)
+loan_amount = st.sidebar.number_input("Loan Amount", min_value=0)
+loan_term = st.sidebar.selectbox("Loan Amount Term", [360, 180, 240, 120])
+credit_history = st.sidebar.selectbox("Credit History", [1, 0])
+property_area = st.sidebar.selectbox("Property Area", ['Urban', 'Semiurban', 'Rural'])
 
-# =====================
-# Convert Input
-# =====================
-input_data = pd.DataFrame([[gender, married, dependents, education,
-                            self_emp, app_income, co_income,
-                            loan_amt, loan_term, credit_history, property_area]],
-                          columns=X.columns)
+# ---------------------------
+# PREDICTION
+# ---------------------------
+if st.sidebar.button("🔍 Check Loan Approval"):
 
-for col in input_data.columns:
-    if input_data[col].dtype == 'object':
-        input_data[col] = le.fit_transform(input_data[col])
+    input_data = pd.DataFrame({
+        'Gender': [gender],
+        'Married': [married],
+        'Dependents': [dependents],
+        'Education': [education],
+        'Self_Employed': [self_employed],
+        'ApplicantIncome': [app_income],
+        'CoapplicantIncome': [coapp_income],
+        'LoanAmount': [loan_amount],
+        'Loan_Amount_Term': [loan_term],
+        'Credit_History': [credit_history],
+        'Property_Area': [property_area]
+    })
 
-# =====================
-# Prediction
-# =====================
-if st.button("🔍 Check Loan Approval"):
+    for col in categorical_cols:
+        input_data[col] = encoder.fit_transform(
+            list(df[col].unique()) + list(input_data[col])
+        )[-1:]
+
     prediction = model.predict(input_data)[0]
-    probability = model.predict_proba(input_data)[0][1]
 
-    st.subheader(f"Applicant: {name}")
+    st.subheader(f"📋 Result for {name if name else 'Applicant'}")
 
     if prediction == 1:
-        st.success(f"✅ Loan Approved (Chance: {probability*100:.2f}%)")
+        st.success("🎉 Loan Approved!")
     else:
-        st.error(f"❌ Loan Not Approved (Chance: {probability*100:.2f}%)")
+        st.error("❌ Loan Not Approved")
 
-# =====================
-# EXTRA INSIGHTS
-# =====================
-st.header("📊 Insights")
-st.bar_chart(df.groupby('Credit_History')['Loan_approval'].mean())
+# ---------------------------
+# FOOTER
+# ---------------------------
+st.markdown("---")
+st.caption("Built with ❤️ using Streamlit & Machine Learning")
+
+
