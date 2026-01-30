@@ -1,6 +1,6 @@
  streamlit 
  pandas 
- numpy as 
+ numpy  
 sklearn.linear_model 
 sklearn.preprocessing 
  
