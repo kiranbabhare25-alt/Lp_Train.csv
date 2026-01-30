@@ -23,7 +23,8 @@ st.write("Enter applicant details to check loan approval status.")
 # ---------------------------
 @st.cache_data
 def load_data():
-    df = pd.read_csv("../Datasets/LP_Train.csv")
+    df = pd.read_csv("LP_Train.csv")
+    
 
     df['Dependents'] = df['Dependents'].fillna(0)
     df['Dependents'] = df['Dependents'].replace('[+]','', regex=True).astype(int)
