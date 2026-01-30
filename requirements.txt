@@ -1,4 +1,6 @@
-streamlit 
+ streamlit 
  pandas 
- numpy 
+ numpy as 
+sklearn.linear_model 
+sklearn.preprocessing 
  
