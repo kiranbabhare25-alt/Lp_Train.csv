@@ -20,7 +20,7 @@ st.markdown('<p class="title">🏦 Loan Approval Prediction System</p>', unsafe_
 # ---------------- DATA ----------------
 @st.cache_data
 def load_data():
-    df = pd.read_csv("../Datasets/LP_Train.csv")
+    df = pd.read_csv("LP_Train.csv")
     df['Dependents'] = df['Dependents'].fillna(0).replace('[+]','',regex=True).astype(int)
     df['Gender'] = df['Gender'].fillna('Male')
     df['Married'] = df['Married'].fillna('Yes')
