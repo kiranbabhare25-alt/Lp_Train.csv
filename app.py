@@ -3,25 +3,28 @@ import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt
 
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 
-st.set_page_config(page_title="Loan Approval App", layout="wide")
+# -------------------------------------------------
+# Page config
+# -------------------------------------------------
+st.set_page_config(page_title="Loan Approval System", layout="wide")
 st.title("🏦 Loan Approval Prediction System")
 
-# ============================
-# Load Dataset (AUTO)
-# ============================
+# -------------------------------------------------
+# Load Dataset (NO UPLOAD)
+# -------------------------------------------------
 @st.cache_data
 def load_data():
     return pd.read_csv("LP_Train.csv")   # keep CSV in same folder
 
 df = load_data()
 
-# ============================
-# Data Cleaning (YOUR LOGIC)
-# ============================
+# -------------------------------------------------
+# Data Cleaning (your original logic)
+# -------------------------------------------------
 if 'Loan_ID' in df.columns:
     df.drop(columns=['Loan_ID'], inplace=True)
 
@@ -35,19 +38,19 @@ df['Credit_History'] = df['Credit_History'].fillna(0).astype(int)
 
 df = df.rename(columns={'Loan_Status': 'Loan_approval'})
 
-# ============================
-# Encode Categories
-# ============================
+# -------------------------------------------------
+# Encode categorical columns
+# -------------------------------------------------
 encoders = {}
-cat_cols = ['Gender','Married','Education','Self_Employed','Property_Area','Loan_approval']
+cat_cols = ['Gender', 'Married', 'Education', 'Self_Employed', 'Property_Area', 'Loan_approval']
 
 for col in cat_cols:
     encoders[col] = LabelEncoder()
     df[col] = encoders[col].fit_transform(df[col])
 
-# ============================
-# Train Model
-# ============================
+# -------------------------------------------------
+# Train ML model
+# -------------------------------------------------
 X = df.drop('Loan_approval', axis=1)
 y = df['Loan_approval']
 
@@ -58,16 +61,20 @@ X_train, X_test, y_train, y_test = train_test_split(
 model = LogisticRegression(max_iter=1000)
 model.fit(X_train, y_train)
 
-# ============================
-# User Input
-# ============================
+# -------------------------------------------------
+# Sidebar - User Input
+# -------------------------------------------------
 st.sidebar.header("Applicant Details")
 
 name = st.sidebar.text_input("Applicant Name")
 income = st.sidebar.number_input("Applicant Income", min_value=0)
 credit_history = st.sidebar.selectbox("Credit History", [0, 1])
 
-if st.sidebar.button("Check Loan Status"):
+# -------------------------------------------------
+# Prediction
+# -------------------------------------------------
+if st.sidebar.button("Check Loan Approval"):
+
     user_data = pd.DataFrame({
         'Gender': [encoders['Gender'].transform(['Male'])[0]],
         'Married': [encoders['Married'].transform(['Yes'])[0]],
@@ -88,15 +95,16 @@ if st.sidebar.button("Check Loan Status"):
     st.subheader(f"Result for {name if name else 'Applicant'}")
 
     if prediction == 1:
-        st.success(f"✅ Loan Approved\n\nChance: **{probability:.2f}%**")
+        st.success(f"✅ Loan Approved\n\nApproval Chance: **{probability:.2f}%**")
     else:
-        st.error(f"❌ Loan Not Approved\n\nChance: **{probability:.2f}%**")
+        st.error(f"❌ Loan Not Approved\n\nApproval Chance: **{probability:.2f}%**")
 
-# ============================
-# Graphs (Interactive)
-# ============================
-st.subheader("📊 Insights")
+# -------------------------------------------------
+# Visualizations
+# -------------------------------------------------
+st.subheader("📊 Loan Data Analysis")
 
+# Row 1
 col1, col2 = st.columns(2)
 
 with col1:
@@ -107,6 +115,42 @@ with col1:
 
 with col2:
     fig, ax = plt.subplots()
+    sb.boxplot(x=df['LoanAmount'], ax=ax)
+    ax.set_title("Loan Amount Distribution")
+    st.pyplot(fig)
+
+# Row 2
+col3, col4 = st.columns(2)
+
+with col3:
+    fig, ax = plt.subplots()
+    sb.countplot(x=df['Loan_approval'], ax=ax)
+    ax.set_title("Loan Approval Count")
+    st.pyplot(fig)
+
+with col4:
+    fig, ax = plt.subplots()
     sb.countplot(x=df['Credit_History'], hue=df['Loan_approval'], ax=ax)
     ax.set_title("Credit History vs Loan Approval")
     st.pyplot(fig)
+
+# Row 3
+col5, col6 = st.columns(2)
+
+with col5:
+    fig, ax = plt.subplots()
+    sb.barplot(x=df['Property_Area'], y=df['LoanAmount'], ax=ax)
+    ax.set_title("Property Area vs Loan Amount")
+    st.pyplot(fig)
+
+with col6:
+    fig, ax = plt.subplots()
+    sb.barplot(x=df['Loan_approval'], y=df['Loan_Amount_Term'], ax=ax)
+    ax.set_title("Loan Term vs Loan Approval")
+    st.pyplot(fig)
+
+# Heatmap
+fig, ax = plt.subplots()
+sb.heatmap(df.corr(numeric_only=True), annot=True, cmap="coolwarm")
+ax.set_title("Correlation Heatmap")
+st.pyplot(fig)
