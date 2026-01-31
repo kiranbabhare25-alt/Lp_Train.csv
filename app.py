@@ -1,126 +1,128 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import seaborn as sb
 import matplotlib.pyplot as plt
+import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 
-st.set_page_config(page_title="Loan Approval Predictor", layout="wide")
-
-st.title("🏦 Loan Approval Prediction App")
+st.set_page_config(page_title="Loan Approval App", layout="wide")
+st.title("🏦 Loan Approval Prediction System")
 
 # =========================
 # Upload Dataset
 # =========================
-st.sidebar.header("Upload Dataset")
-file = st.sidebar.file_uploader("Upload Loan CSV File", type=["csv"])
+uploaded_file = st.sidebar.file_uploader("Upload LP_Train.csv", type="csv")
 
-if file is not None:
-    df = pd.read_csv(file)
+if uploaded_file is None:
+    st.info("Please upload the dataset to continue")
+    st.stop()
 
-    st.subheader("📄 Dataset Preview")
-    st.dataframe(df.head())
+df = pd.read_csv(uploaded_file)
 
-    # =========================
-    # Data Cleaning
-    # =========================
-    df['Dependents'] = df['Dependents'].fillna(0)
-    df['Dependents'] = df['Dependents'].replace('[+]','', regex=True).astype(int)
+# =========================
+# Data Cleaning (YOUR CODE)
+# =========================
+if 'Loan_ID' in df.columns:
+    df.drop(columns=['Loan_ID'], inplace=True)
 
-    df['Gender'] = df['Gender'].fillna('Male')
-    df['LoanAmount'] = df['LoanAmount'].fillna(df['LoanAmount'].mean()).astype(int)
-    df['Loan_Amount_Term'] = df['Loan_Amount_Term'].fillna(df['Loan_Amount_Term'].mean())
-    df['Credit_History'] = df['Credit_History'].fillna(0).astype(int)
+df['Dependents'] = df['Dependents'].fillna(0)
+df['Dependents'] = df['Dependents'].replace('[+]', '', regex=True).astype(int)
 
-    df = df.rename(columns={'Loan_Status': 'Loan_approval'})
+df['Gender'] = df['Gender'].fillna('Male')
+df['LoanAmount'] = df['LoanAmount'].fillna(146).astype(int)
+df['Loan_Amount_Term'] = df['Loan_Amount_Term'].fillna(342.0)
+df['Credit_History'] = df['Credit_History'].fillna(0).astype(int)
 
-    # Encode categorical columns
-    le = LabelEncoder()
-    cat_cols = ['Gender','Married','Education','Self_Employed','Property_Area','Loan_approval']
+df = df.rename(columns={'Loan_Status': 'Loan_approval'})
 
-    for col in cat_cols:
-        df[col] = le.fit_transform(df[col])
+# =========================
+# Encode Categorical Data
+# =========================
+encoders = {}
+cat_cols = ['Gender', 'Married', 'Education', 'Self_Employed', 'Property_Area', 'Loan_approval']
 
-    # =========================
-    # Model Training
-    # =========================
-    X = df.drop('Loan_approval', axis=1)
-    y = df['Loan_approval']
+for col in cat_cols:
+    encoders[col] = LabelEncoder()
+    df[col] = encoders[col].fit_transform(df[col])
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+# =========================
+# Train Model
+# =========================
+X = df.drop('Loan_approval', axis=1)
+y = df['Loan_approval']
 
-    model = LogisticRegression(max_iter=1000)
-    model.fit(X_train, y_train)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
-    st.success("✅ Model trained successfully!")
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train, y_train)
 
-    # =========================
-    # User Input Section
-    # =========================
-    st.sidebar.header("Enter Applicant Details")
+st.success("Model trained successfully")
 
-    gender = st.sidebar.selectbox("Gender", ['Male','Female'])
-    married = st.sidebar.selectbox("Married", ['Yes','No'])
-    education = st.sidebar.selectbox("Education", ['Graduate','Not Graduate'])
-    self_employed = st.sidebar.selectbox("Self Employed", ['Yes','No'])
-    property_area = st.sidebar.selectbox("Property Area", ['Urban','Semiurban','Rural'])
+# =========================
+# User Input
+# =========================
+st.sidebar.header("Applicant Details")
 
-    applicant_income = st.sidebar.number_input("Applicant Income", min_value=0)
-    coapplicant_income = st.sidebar.number_input("Coapplicant Income", min_value=0)
-    loan_amount = st.sidebar.number_input("Loan Amount", min_value=0)
-    loan_term = st.sidebar.number_input("Loan Amount Term", min_value=0)
-    credit_history = st.sidebar.selectbox("Credit History", [0,1])
-    dependents = st.sidebar.selectbox("Dependents", [0,1,2,3])
+name = st.sidebar.text_input("Applicant Name")
 
-    if st.sidebar.button("Predict Loan Approval"):
-        user_data = pd.DataFrame({
-            'Gender': [le.fit_transform([gender])[0]],
-            'Married': [le.fit_transform([married])[0]],
-            'Dependents': [dependents],
-            'Education': [le.fit_transform([education])[0]],
-            'Self_Employed': [le.fit_transform([self_employed])[0]],
-            'ApplicantIncome': [applicant_income],
-            'CoapplicantIncome': [coapplicant_income],
-            'LoanAmount': [loan_amount],
-            'Loan_Amount_Term': [loan_term],
-            'Credit_History': [credit_history],
-            'Property_Area': [le.fit_transform([property_area])[0]]
-        })
+income = st.sidebar.number_input("Applicant Income", min_value=0)
+credit_history = st.sidebar.selectbox("Credit History", [0, 1])
 
-        prediction = model.predict(user_data)[0]
-        probability = model.predict_proba(user_data)[0][1]
+if st.sidebar.button("Check Loan Approval"):
+    user_input = pd.DataFrame({
+        'Gender': [encoders['Gender'].transform(['Male'])[0]],
+        'Married': [encoders['Married'].transform(['Yes'])[0]],
+        'Dependents': [0],
+        'Education': [encoders['Education'].transform(['Graduate'])[0]],
+        'Self_Employed': [encoders['Self_Employed'].transform(['No'])[0]],
+        'ApplicantIncome': [income],
+        'CoapplicantIncome': [0],
+        'LoanAmount': [150],
+        'Loan_Amount_Term': [360],
+        'Credit_History': [credit_history],
+        'Property_Area': [encoders['Property_Area'].transform(['Urban'])[0]]
+    })
 
-        st.subheader("🔮 Prediction Result")
-        if prediction == 1:
-            st.success(f"Loan Approved ✅ (Chance: {probability*100:.2f}%)")
-        else:
-            st.error(f"Loan Not Approved ❌ (Chance: {probability*100:.2f}%)")
+    prediction = model.predict(user_input)[0]
+    probability = model.predict_proba(user_input)[0][1] * 100
 
-    # =========================
-    # Interactive Visualizations
-    # =========================
-    st.subheader("📊 Data Insights")
+    st.subheader(f"Result for {name if name else 'Applicant'}")
 
-    col1, col2 = st.columns(2)
+    if prediction == 1:
+        st.success(f"✅ Loan Approved\n\nChance: **{probability:.2f}%**")
+    else:
+        st.error(f"❌ Loan Not Approved\n\nChance: **{probability:.2f}%**")
 
-    with col1:
-        fig, ax = plt.subplots()
-        sb.boxplot(x=df['ApplicantIncome'], ax=ax)
-        st.pyplot(fig)
+# =========================
+# Visualizations (EDA)
+# =========================
+st.subheader("📊 Data Analysis")
 
-    with col2:
-        fig, ax = plt.subplots()
-        sb.barplot(x=df['Loan_approval'], y=df['CoapplicantIncome'], ax=ax)
-        st.pyplot(fig)
+col1, col2 = st.columns(2)
 
+with col1:
     fig, ax = plt.subplots()
-    sb.countplot(x=df['Credit_History'], hue=df['Loan_approval'], ax=ax)
+    sb.boxplot(x=df['ApplicantIncome'], ax=ax)
+    ax.set_title("Applicant Income Distribution")
     st.pyplot(fig)
 
-else:
-    st.info("👈 Upload a CSV file to get started")
+with col2:
+    fig, ax = plt.subplots()
+    sb.countplot(x=df['Credit_History'], hue=df['Loan_approval'], ax=ax)
+    ax.set_title("Credit History vs Loan Approval")
+    st.pyplot(fig)
+
+fig, ax = plt.subplots()
+sb.barplot(x=df['Loan_approval'], y=df['LoanAmount'], ax=ax)
+ax.set_title("Loan Amount vs Approval")
+st.pyplot(fig)
+
+fig, ax = plt.subplots()
+sb.barplot(x=df['Property_Area'], y=df['LoanAmount'], ax=ax)
+ax.set_title("Property Area vs Loan Amount")
+st.pyplot(fig)
