@@ -2,29 +2,26 @@ import streamlit as st
 import pandas as pd
 import seaborn as sb
 import matplotlib.pyplot as plt
-import numpy as np
 
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 st.set_page_config(page_title="Loan Approval App", layout="wide")
 st.title("🏦 Loan Approval Prediction System")
 
-# =========================
-# Upload Dataset
-# =========================
-uploaded_file = st.sidebar.file_uploader("Upload LP_Train.csv", type="csv")
+# ============================
+# Load Dataset (AUTO)
+# ============================
+@st.cache_data
+def load_data():
+    return pd.read_csv("LP_Train.csv")   # keep CSV in same folder
 
-if uploaded_file is None:
-    st.info("Please upload the dataset to continue")
-    st.stop()
+df = load_data()
 
-df = pd.read_csv(uploaded_file)
-
-# =========================
-# Data Cleaning (YOUR CODE)
-# =========================
+# ============================
+# Data Cleaning (YOUR LOGIC)
+# ============================
 if 'Loan_ID' in df.columns:
     df.drop(columns=['Loan_ID'], inplace=True)
 
@@ -38,19 +35,19 @@ df['Credit_History'] = df['Credit_History'].fillna(0).astype(int)
 
 df = df.rename(columns={'Loan_Status': 'Loan_approval'})
 
-# =========================
-# Encode Categorical Data
-# =========================
+# ============================
+# Encode Categories
+# ============================
 encoders = {}
-cat_cols = ['Gender', 'Married', 'Education', 'Self_Employed', 'Property_Area', 'Loan_approval']
+cat_cols = ['Gender','Married','Education','Self_Employed','Property_Area','Loan_approval']
 
 for col in cat_cols:
     encoders[col] = LabelEncoder()
     df[col] = encoders[col].fit_transform(df[col])
 
-# =========================
+# ============================
 # Train Model
-# =========================
+# ============================
 X = df.drop('Loan_approval', axis=1)
 y = df['Loan_approval']
 
@@ -61,20 +58,17 @@ X_train, X_test, y_train, y_test = train_test_split(
 model = LogisticRegression(max_iter=1000)
 model.fit(X_train, y_train)
 
-st.success("Model trained successfully")
-
-# =========================
+# ============================
 # User Input
-# =========================
+# ============================
 st.sidebar.header("Applicant Details")
 
 name = st.sidebar.text_input("Applicant Name")
-
 income = st.sidebar.number_input("Applicant Income", min_value=0)
 credit_history = st.sidebar.selectbox("Credit History", [0, 1])
 
-if st.sidebar.button("Check Loan Approval"):
-    user_input = pd.DataFrame({
+if st.sidebar.button("Check Loan Status"):
+    user_data = pd.DataFrame({
         'Gender': [encoders['Gender'].transform(['Male'])[0]],
         'Married': [encoders['Married'].transform(['Yes'])[0]],
         'Dependents': [0],
@@ -88,8 +82,8 @@ if st.sidebar.button("Check Loan Approval"):
         'Property_Area': [encoders['Property_Area'].transform(['Urban'])[0]]
     })
 
-    prediction = model.predict(user_input)[0]
-    probability = model.predict_proba(user_input)[0][1] * 100
+    prediction = model.predict(user_data)[0]
+    probability = model.predict_proba(user_data)[0][1] * 100
 
     st.subheader(f"Result for {name if name else 'Applicant'}")
 
@@ -98,10 +92,10 @@ if st.sidebar.button("Check Loan Approval"):
     else:
         st.error(f"❌ Loan Not Approved\n\nChance: **{probability:.2f}%**")
 
-# =========================
-# Visualizations (EDA)
-# =========================
-st.subheader("📊 Data Analysis")
+# ============================
+# Graphs (Interactive)
+# ============================
+st.subheader("📊 Insights")
 
 col1, col2 = st.columns(2)
 
@@ -116,13 +110,3 @@ with col2:
     sb.countplot(x=df['Credit_History'], hue=df['Loan_approval'], ax=ax)
     ax.set_title("Credit History vs Loan Approval")
     st.pyplot(fig)
-
-fig, ax = plt.subplots()
-sb.barplot(x=df['Loan_approval'], y=df['LoanAmount'], ax=ax)
-ax.set_title("Loan Amount vs Approval")
-st.pyplot(fig)
-
-fig, ax = plt.subplots()
-sb.barplot(x=df['Property_Area'], y=df['LoanAmount'], ax=ax)
-ax.set_title("Property Area vs Loan Amount")
-st.pyplot(fig)
